@@ -18,7 +18,7 @@ namespace FileTree
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
-            Database.SetInitializer<FileTreeContext>(new DropCreateDatabaseIfModelChanges<FileTreeContext>());
+            Database.SetInitializer<FileTreeContext>(new FileTreeInitializer());
         }
     }
 }
