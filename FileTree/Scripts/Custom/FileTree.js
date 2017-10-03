@@ -1,15 +1,19 @@
 ﻿"use strict";
 
 var FileTree = (function () {
+    //Model
     var uniquePrefix = "veryUniquePrefix";
     var treeEntryId = 0;
-    //Model
+    var idToRefMappingStorage = {};
+    
+
     var TreeEntry = function (name, parent = null, isFolder = false, children = []) {
         this.name = name;
         this.parent = parent;
         this.isFolder = isFolder;
         this.children = children;
-        this.ID = treeEntryId;
+        this.Id = treeEntryId;
+        idToRefMappingStorage[treeEntryId] = this;
         treeEntryId += 1;
     }
 
@@ -23,13 +27,32 @@ var FileTree = (function () {
         if (position == -1) {
             this.children.push(treeEntry);
         } else {
-            this.children.splice(position, 0, treeEntry);
+            this.children.splice(position+1, 0, treeEntry);
         }
+        treeEntry.parent = this;
         return this;
     }
 
+    TreeEntry.prototype.removeFromParent = function () {
+        if (this.parent !== null) {
+            var that = this;
+            this.parent.children = this.parent.children.filter(
+                function (ref) { return ref !== that }
+            );
+        }
+    }
+
     TreeEntry.prototype.getDomID = function(){
-        return uniquePrefix + this.ID;
+        return uniquePrefix + this.Id;
+    }
+
+    function getModelRefFromDomID(domId) {
+        var re = /^\D+(\d+)$/;
+        var id = re.exec(domId);
+        if (id.length !== 2)
+            return null;
+        id = +id[1]
+        return idToRefMappingStorage[id];
     }
 
     //View
@@ -68,7 +91,7 @@ var FileTree = (function () {
 
         return function (event, ui) {
             var whatsDropped = ui.draggable;
-
+            //update DOM part
             if (treeEntry.isFolder) {
                 var whereDropped = $("#" + treeEntry.getDomID());
                 whereDropped.append(whatsDropped);
@@ -78,6 +101,16 @@ var FileTree = (function () {
             }
             var index = whatsDropped.index();
             whatsDropped.css({ top: '0px', left: '20px' });
+
+            //update our model
+            whatsDropped = getModelRefFromDomID(whatsDropped.attr("id"));
+            whatsDropped.removeFromParent();
+            if (treeEntry.isFolder) {
+                treeEntry.addChild(whatsDropped);
+            } else {
+                treeEntry.parent.addChild(whatsDropped, false, whereDropped.index())
+            }
+            console.log(treeEntry);
         };
     }
 
