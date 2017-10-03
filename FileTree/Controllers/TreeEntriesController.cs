@@ -8,6 +8,7 @@ using System.Web;
 using System.Web.Mvc;
 using FileTree.Models;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace FileTree.Controllers
 {
@@ -18,13 +19,36 @@ namespace FileTree.Controllers
         // GET: TreeEntries
         public ActionResult Index()
         {
+            var fileTree = db.TreeEntries.Where(x => x.Id == 1);
+            
             return Json(
-                JsonConvert.SerializeObject(db.TreeEntries.Where(x => x.Id == 1),
+                JsonConvert.SerializeObject(fileTree,
                     new JsonSerializerSettings {
                         ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                         Formatting = Formatting.Indented})
                 , JsonRequestBehavior.AllowGet
                 );
+        }
+
+        // POST: TreeEntries/Move/5?newParentId=2&position=0
+        [HttpPost]
+        public ActionResult Move(int movedId, int newParentId, int position)
+        {
+            try
+            {
+                var movedTreeEntry = db.TreeEntries.Where(x => x.Id == movedId).Single();
+                var newParent = db.TreeEntries.Where(x => x.Id == newParentId).Single();
+                movedTreeEntry.RemoveFromParent();
+                newParent.AddChild(movedTreeEntry, position);
+                db.SaveChanges();
+                return new HttpStatusCodeResult(200);
+            }
+            catch(Exception e)
+            {
+                return new HttpStatusCodeResult(400);
+            }
+            
+            
         }
 
         // GET: TreeEntries/Details/5

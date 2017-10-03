@@ -13,25 +13,39 @@ namespace FileTree.Models
         public int Id { get; set; }
         public string Name { get; set; }
         public bool IsFolder { get; set; }
+        public int Position { get; set; }
 
-        public virtual ICollection<TreeEntry> Children { get; set; }
+        public virtual List<TreeEntry> Children { get; set; }
         public TreeEntry Parent { get; set; }
+
+        public void AddChild(TreeEntry child, int position=-1)
+        {
+            if (position == -1)
+            {
+                child.Position = this.Children.Count;
+                this.Children.Add(child);
+            }
+            else
+            {
+                child.Position = position;
+                this.Children.Insert(position, child);
+            }
+        }
+
+        public bool RemoveFromParent()
+        {
+            if (this.Parent != null)
+            {
+                return this.Parent.Children.Remove(this);
+            }
+            return false;
+        }
+
     }
-
-    /*
-    public class ParentChildPair
-    {   
-        public int id { get; set; }
-
-        [Required]
-        public TreeEntry Parent { get; set; }
-        public TreeEntry Child { get; set; }
-    }*/
 
     public class FileTreeContext: DbContext
     {
         public DbSet<TreeEntry> TreeEntries { get; set; }
-        //public DbSet<ParentChildPair> ParentChildPairs { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
