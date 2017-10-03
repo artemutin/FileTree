@@ -108,7 +108,7 @@ var FileTree = (function () {
             if (treeEntry.isFolder) {
                 treeEntry.addChild(whatsDropped);
             } else {
-                treeEntry.parent.addChild(whatsDropped, false, whereDropped.index())
+                treeEntry.parent.addChild(whatsDropped, false, whereDropped.index());
             }
             console.log(treeEntry);
         };
