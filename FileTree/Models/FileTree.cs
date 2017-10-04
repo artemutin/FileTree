@@ -10,9 +10,9 @@ namespace FileTree.Models
 {
     public class TreeEntry
     {
-        public int id { get; set; }
-        public string name { get; set; }
-        public bool isFolder { get; set; }
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public bool IsFolder { get; set; }
 
         public virtual ICollection<TreeEntry> Children { get; set; }
         public TreeEntry Parent { get; set; }

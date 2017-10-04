@@ -5,16 +5,18 @@ var FileTree = (function () {
     var uniquePrefix = "veryUniquePrefix";
     var treeEntryId = 0;
     var idToRefMappingStorage = {};
+    var domReady = false;
+    var deflatedFileTree = null;
     
 
-    var TreeEntry = function (name, parent = null, isFolder = false, children = []) {
+    var TreeEntry = function (Id, name, parent = null, isFolder = false, children = []) {
         this.name = name;
         this.parent = parent;
         this.isFolder = isFolder;
         this.children = children;
-        this.Id = treeEntryId;
-        idToRefMappingStorage[treeEntryId] = this;
-        treeEntryId += 1;
+        this.Id = Id;
+        idToRefMappingStorage[Id] = this;
+        //treeEntryId += 1;
     }
 
     TreeEntry.prototype.addChild = function (treeEntry, isFolder=false, position = -1) {
@@ -54,6 +56,14 @@ var FileTree = (function () {
         id = +id[1]
         return idToRefMappingStorage[id];
     }
+
+    function inflateFileTree(deflatedFileTree, parent = null) {
+        var treeEntry = new TreeEntry(deflatedFileTree.Id, deflatedFileTree.Name, parent, deflatedFileTree.IsFolder);
+        treeEntry.children = deflatedFileTree.Children.map(function (val) {
+            return inflateFileTree(val, treeEntry);
+        });
+        return treeEntry;
+    };
 
     //View
 
@@ -114,23 +124,33 @@ var FileTree = (function () {
         };
     }
 
-    var onDocumentReady = function() {
-        var node = $("#root");
-        node.text = "I am root!";
-
-        var fileTree = new FileTree.TreeEntry("/", null, true);
-        fileTree.addChild("/usr", true);
-        fileTree.addChild("fstab");
-        fileTree.addChild(new TreeEntry("/home", null, true));
-        fileTree.children[2].addChild("Downloads",true).addChild(".bashrc");
-
-        node.append(FileTree.viewFileTree(fileTree));
+    var startingCallback = function (arg) {
+        if (typeof arg === "function") {
+            //it's a call from jquery.ready()
+            domReady = true;
+        } else {
+            //it's returned FileTree json
+            deflatedFileTree = JSON.parse(arg)[0];
+        }
+        if (domReady && deflatedFileTree !== null) {
+            //we are good to go
+            var node = $("#root");
+            node.text = "I am root!";
+            var fileTree = inflateFileTree(deflatedFileTree);
+            node.append(viewFileTree(fileTree));
+        }
     }
 
+    $.ajax("TreeEntries", {
+        dataType: "json",
+        success: startingCallback,
+        error: function (jqXHR, status) {
+            console.error(status);
+        }
+    });
+
     return {   
-        TreeEntry: TreeEntry,
-        viewFileTree: viewFileTree,
-        onDocumentReady: onDocumentReady
+        onDocumentReady: startingCallback
     }
 })();
 

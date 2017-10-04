@@ -7,6 +7,7 @@ using System.Net;
 using System.Web;
 using System.Web.Mvc;
 using FileTree.Models;
+using Newtonsoft.Json;
 
 namespace FileTree.Controllers
 {
@@ -17,7 +18,13 @@ namespace FileTree.Controllers
         // GET: TreeEntries
         public ActionResult Index()
         {
-            return View(db.TreeEntries.ToList());
+            return Json(
+                JsonConvert.SerializeObject(db.TreeEntries.Where(x => x.Id == 1),
+                    new JsonSerializerSettings {
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                        Formatting = Formatting.Indented})
+                , JsonRequestBehavior.AllowGet
+                );
         }
 
         // GET: TreeEntries/Details/5
