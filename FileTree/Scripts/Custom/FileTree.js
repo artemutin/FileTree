@@ -71,24 +71,26 @@ var FileTree = (function () {
 
     var viewFileTree = function (treeEntry) {
         var node;
+
         if (!treeEntry.isFolder) {
             node = $('<div/>', {
                 text: treeEntry.name,
                 class: 'ident',
                 id: treeEntry.getDomID()
-            });
+            }).prepend('<img class="tree_icon" src="Content/Images/file.png" />');
             
         } else {
             node = $('<div/>', {
                 text: treeEntry.name,
                 class: 'ident',
                 id: treeEntry.getDomID(),
-            })
+            }).prepend('<img class="tree_icon" src="Content/Images/folder.png" />')
                 .append(treeEntry.children.map(viewFileTree));
         }
 
         node.draggable({
-            containment: "#root"
+            containment: "#root",
+            helper: "clone"
         });
         node.droppable({
             drop: treeEntry.getOnDropHandler(),
@@ -98,7 +100,7 @@ var FileTree = (function () {
     };
 
     //Event handling
-    function sendDropResultToServer(movedTreeEntry, position) {
+    function sendDropResultToServer(movedTreeEntry, position, whereDropped) {
         $.ajax("TreeEntries/Move",
             {
                 data: {
@@ -109,6 +111,8 @@ var FileTree = (function () {
                 method: 'POST',
                 success: function () {
                     console.log('Successfully updated');
+                    whereDropped.children(".tree_icon").show();
+                    whereDropped.children("i").remove();
                 },
                 error: function (jqXHR, status) {
                     console.error(status);
@@ -129,7 +133,9 @@ var FileTree = (function () {
                 whereDropped = $("#" + treeEntry.getDomID());
                 whatsDropped.insertAfter(whereDropped);
             }
-            
+
+            whereDropped.children(".tree_icon").hide();
+            whereDropped.prepend('<i class="fa fa-refresh fa-spin fa-1x fa-fw" aria-hidden="true"></i>')
             whatsDropped.css({ top: '0px', left: '20px' });
 
             //update our model
@@ -142,7 +148,7 @@ var FileTree = (function () {
                 position = whereDropped.index();
                 treeEntry.parent.addChild(whatsDropped, false, position);
             }
-            sendDropResultToServer(whatsDropped, position);
+            sendDropResultToServer(whatsDropped, position, whereDropped);
             console.log(treeEntry);
         };
     }
@@ -158,7 +164,7 @@ var FileTree = (function () {
         if (domReady && deflatedFileTree !== null) {
             //we are good to go
             var node = $("#root");
-            node.text = "I am root!";
+            node.children().remove();
             var fileTree = inflateFileTree(deflatedFileTree);
             node.append(viewFileTree(fileTree));
         }

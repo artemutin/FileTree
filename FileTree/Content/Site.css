@@ -23,9 +23,15 @@ textarea {
     max-width: 280px;
 }
 
+#root{
+    padding: 40px;
+    margin: auto;
+    width: 400px;
+}
+
 .ident{
-    position: relative;
-    left: 20px;
+    margin-left: 20px;
+    margin-top: 10px;
     border: 1px solid black;
     max-width: 200px;
 }

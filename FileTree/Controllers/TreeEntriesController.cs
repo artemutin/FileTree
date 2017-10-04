@@ -9,6 +9,7 @@ using System.Web.Mvc;
 using FileTree.Models;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Threading;
 
 namespace FileTree.Controllers
 {
@@ -34,6 +35,7 @@ namespace FileTree.Controllers
         [HttpPost]
         public ActionResult Move(int movedId, int newParentId, int position)
         {
+            Thread.Sleep(2000);
             try
             {
                 var movedTreeEntry = db.TreeEntries.Where(x => x.Id == movedId).Single();
