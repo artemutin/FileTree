@@ -9,23 +9,27 @@ var FileTree = (function () {
     var deflatedFileTree = null;
     
 
-    var TreeEntry = function (Id, name, parent = null, isFolder = false, children = []) {
+    var TreeEntry = function (Id, name, parent = null, children = null) {
         this.name = name;
         this.parent = parent;
-        this.isFolder = isFolder;
         this.children = children;
+        this.isHovered = false;
         this.Id = Id;
         idToRefMappingStorage[Id] = this;
-        //treeEntryId += 1;
+        
+    }
+
+    TreeEntry.prototype.isFolder = function(){
+        return this.children !== null;
     }
 
     TreeEntry.prototype.addChild = function (treeEntry, isFolder=false, position = -1) {
-        if (!this.isFolder || position > this.children.length)
+        if (!this.isFolder() || position > this.children.length)
             return this;
         if (typeof treeEntry === 'string') {
-            treeEntry = new TreeEntry(treeEntry, this, isFolder);
+            treeEntry = new TreeEntry(treeEntry, this, []);
         };
-
+        //this.children = this.children === null ? [] : this.children; 
         if (position == -1) {
             this.children.push(treeEntry);
         } else {
@@ -48,6 +52,13 @@ var FileTree = (function () {
         return uniquePrefix + this.Id;
     }
 
+    TreeEntry.prototype.switchOfIsHovered = function () {
+        this.isHovered = false;
+        if (this.parent !== null) {
+            this.parent.switchOfIsHovered;
+        };
+    }
+
     function getModelRefFromDomID(domId) {
         var re = /^\D+(\d+)$/;
         var id = re.exec(domId);
@@ -58,12 +69,15 @@ var FileTree = (function () {
     }
 
     function inflateFileTree(deflatedFileTree, parent = null) {
-        var treeEntry = new TreeEntry(deflatedFileTree.Id, deflatedFileTree.Name, parent, deflatedFileTree.IsFolder);
-        treeEntry.children = deflatedFileTree.Children.sort(function (a, b) {
-            return a.Position > b.Position
-        }).map(function (val) {
-            return inflateFileTree(val, treeEntry);
-        });
+        var treeEntry = new TreeEntry(deflatedFileTree.Id, deflatedFileTree.Name, parent, deflatedFileTree.IsFolder ? [] : null);
+        if (deflatedFileTree.IsFolder) {
+            treeEntry.children = deflatedFileTree.Children.sort(function (a, b) {
+                return a.Position > b.Position
+            }).map(function (val) {
+                return inflateFileTree(val, treeEntry);
+            });
+        }
+        
         return treeEntry;
     };
 
@@ -72,7 +86,7 @@ var FileTree = (function () {
     var viewFileTree = function (treeEntry) {
         var node;
 
-        if (!treeEntry.isFolder) {
+        if (!treeEntry.isFolder()) {
             node = $('<div/>', {
                 text: treeEntry.name,
                 class: 'ident',
@@ -92,9 +106,14 @@ var FileTree = (function () {
             containment: "#root",
             helper: "clone"
         });
+
+        var droppableHandlers = treeEntry.getDroppableHandlers();
         node.droppable({
-            drop: treeEntry.getOnDropHandler(),
-            greedy: true
+            drop: droppableHandlers.dropHandler,
+            over: droppableHandlers.overHandler,
+            out: droppableHandlers.outHandler,
+            greedy: true,
+            tolerance: "intersect"
         });
         return node;
     };
@@ -120,37 +139,60 @@ var FileTree = (function () {
             });
     };
 
-    TreeEntry.prototype.getOnDropHandler = function () {
+    TreeEntry.prototype.getDroppableHandlers = function () {
         var treeEntry = this;
 
-        return function (event, ui) {
+        function dropHandler(event, ui) {
+            if (ui.helper.is(".dropped")) {
+                return;//to prevent some glitchy event propagation, we marked helper(which is cloned) as dropped on first handler call
+            } else {
+                ui.helper.addClass("dropped");
+            }
             var whatsDropped = ui.draggable;
+            var position = -1;
+         
             //update DOM part
-            if (treeEntry.isFolder) {
+            if (treeEntry.isFolder() && treeEntry.isHovered) {
                 var whereDropped = $("#" + treeEntry.getDomID());
                 whereDropped.append(whatsDropped);
             } else {
+                //dropped on some file item inside directory
                 whereDropped = $("#" + treeEntry.getDomID());
                 whatsDropped.insertAfter(whereDropped);
+                position = whereDropped.index();
+                whereDropped = whereDropped.parent();//now it points to folder, which contains item being dropped on
             }
 
             whereDropped.children(".tree_icon").hide();
-            whereDropped.prepend('<i class="fa fa-refresh fa-spin fa-1x fa-fw" aria-hidden="true"></i>')
-            whatsDropped.css({ top: '0px', left: '20px' });
+            whereDropped.prepend('<i class="fa fa-refresh fa-spin fa-1x fa-fw" aria-hidden="true"></i>');
 
             //update our model
+            treeEntry.switchOfIsHovered();
             whatsDropped = getModelRefFromDomID(whatsDropped.attr("id"));
             whatsDropped.removeFromParent();
-            var position = -1;
-            if (treeEntry.isFolder) {
+            
+            if (treeEntry.isFolder()) {
                 treeEntry.addChild(whatsDropped);
             } else {
-                position = whereDropped.index();
                 treeEntry.parent.addChild(whatsDropped, false, position);
             }
             sendDropResultToServer(whatsDropped, position, whereDropped);
             console.log(treeEntry);
         };
+
+        function overHandler(event, ui) {
+            treeEntry.isHovered = true;
+        }
+
+        function outHandler(event, ui) {
+            treeEntry.isHovered = false;
+        }
+
+        return {
+            dropHandler: dropHandler,
+            overHandler: overHandler,
+            outHandler: outHandler
+        }
     }
 
     var startingCallback = function (arg) {

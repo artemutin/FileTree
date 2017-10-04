@@ -7,7 +7,7 @@ using System.Data.Entity;
 
 namespace FileTree.Models
 {
-    public class FileTreeInitializer : DropCreateDatabaseIfModelChanges<FileTreeContext>
+    public class FileTreeInitializer : DropCreateDatabaseAlways<FileTreeContext>
     {
 
         protected override void Seed(FileTreeContext context)
@@ -19,27 +19,27 @@ namespace FileTree.Models
                 IsFolder = true
             };
 
-            var home = new TreeEntry { Name = "home/", IsFolder = true };
-            var usr = new TreeEntry { Name = "usr/", IsFolder = true };
+            var home = new TreeEntry { Name = "home/", IsFolder = true, Position = 1 };
+            var usr = new TreeEntry { Name = "usr/", IsFolder = true, Position = 0 };
             treeEntry.Children = new List<TreeEntry> {
                 usr,
                 home,
-                new TreeEntry { Name = "var/", IsFolder = true },
-                new TreeEntry { Name = "tmp/", IsFolder = true },
-                new TreeEntry { Name = "fstab", IsFolder = false }
+                new TreeEntry { Name = "var/", IsFolder = true, Position = 2},
+                new TreeEntry { Name = "tmp/", IsFolder = true, Position = 3},
+                new TreeEntry { Name = "fstab", IsFolder = false, Position = 4}
             };
             usr.Children = new List<TreeEntry>
             {
                 new TreeEntry { Name = "bin/", IsFolder=true},
-                new TreeEntry { Name = "local/", IsFolder = true },
-                new TreeEntry { Name = "someFile", IsFolder = false }
+                new TreeEntry { Name = "local/", IsFolder = true, Position = 1},
+                new TreeEntry { Name = "someFile", IsFolder = false, Position = 2}
             };
             home.Children = new List<TreeEntry>
             {
                 new TreeEntry { Name = ".zshrc", IsFolder = false },
-                new TreeEntry { Name = "Downloads/", IsFolder=true},
-                new TreeEntry { Name = "Images/", IsFolder = true },
-                new TreeEntry { Name = ".config/", IsFolder = true }
+                new TreeEntry { Name = "Downloads/", IsFolder=true, Position=1},
+                new TreeEntry { Name = "Images/", IsFolder = true, Position=2},
+                new TreeEntry { Name = ".config/", IsFolder = true, Position=3}
             };
             context.TreeEntries.Add(treeEntry);
         }
