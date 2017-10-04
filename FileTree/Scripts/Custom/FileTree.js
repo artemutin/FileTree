@@ -29,7 +29,7 @@ var FileTree = (function () {
         if (position == -1) {
             this.children.push(treeEntry);
         } else {
-            this.children.splice(position+1, 0, treeEntry);
+            this.children.splice(position, 0, treeEntry);
         }
         treeEntry.parent = this;
         return this;
@@ -59,7 +59,9 @@ var FileTree = (function () {
 
     function inflateFileTree(deflatedFileTree, parent = null) {
         var treeEntry = new TreeEntry(deflatedFileTree.Id, deflatedFileTree.Name, parent, deflatedFileTree.IsFolder);
-        treeEntry.children = deflatedFileTree.Children.map(function (val) {
+        treeEntry.children = deflatedFileTree.Children.sort(function (a, b) {
+            return a.Position > b.Position
+        }).map(function (val) {
             return inflateFileTree(val, treeEntry);
         });
         return treeEntry;
@@ -96,6 +98,24 @@ var FileTree = (function () {
     };
 
     //Event handling
+    function sendDropResultToServer(movedTreeEntry, position) {
+        $.ajax("TreeEntries/Move",
+            {
+                data: {
+                    movedId: movedTreeEntry.Id,
+                    newParentId: movedTreeEntry.parent.Id,
+                    position: position
+                },
+                method: 'POST',
+                success: function () {
+                    console.log('Successfully updated');
+                },
+                error: function (jqXHR, status) {
+                    console.error(status);
+                }
+            });
+    };
+
     TreeEntry.prototype.getOnDropHandler = function () {
         var treeEntry = this;
 
@@ -109,17 +129,20 @@ var FileTree = (function () {
                 whereDropped = $("#" + treeEntry.getDomID());
                 whatsDropped.insertAfter(whereDropped);
             }
-            var index = whatsDropped.index();
+            
             whatsDropped.css({ top: '0px', left: '20px' });
 
             //update our model
             whatsDropped = getModelRefFromDomID(whatsDropped.attr("id"));
             whatsDropped.removeFromParent();
+            var position = -1;
             if (treeEntry.isFolder) {
                 treeEntry.addChild(whatsDropped);
             } else {
-                treeEntry.parent.addChild(whatsDropped, false, whereDropped.index());
+                position = whereDropped.index();
+                treeEntry.parent.addChild(whatsDropped, false, position);
             }
+            sendDropResultToServer(whatsDropped, position);
             console.log(treeEntry);
         };
     }

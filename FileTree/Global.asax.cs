@@ -12,6 +12,7 @@ namespace FileTree
 {
     public class MvcApplication : System.Web.HttpApplication
     {
+
         protected void Application_Start()
         {
             AreaRegistration.RegisterAllAreas();
@@ -20,5 +21,6 @@ namespace FileTree
             BundleConfig.RegisterBundles(BundleTable.Bundles);
             Database.SetInitializer<FileTreeContext>(new FileTreeInitializer());
         }
+
     }
 }

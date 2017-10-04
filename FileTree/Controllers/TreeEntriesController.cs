@@ -30,7 +30,7 @@ namespace FileTree.Controllers
                 );
         }
 
-        // POST: TreeEntries/Move/5?newParentId=2&position=0
+        // POST: TreeEntries/Move/?movedId=1&newParentId=2&position=0
         [HttpPost]
         public ActionResult Move(int movedId, int newParentId, int position)
         {

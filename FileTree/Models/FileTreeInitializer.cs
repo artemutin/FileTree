@@ -7,7 +7,7 @@ using System.Data.Entity;
 
 namespace FileTree.Models
 {
-    public class FileTreeInitializer : DropCreateDatabaseAlways<FileTreeContext>
+    public class FileTreeInitializer : DropCreateDatabaseIfModelChanges<FileTreeContext>
     {
 
         protected override void Seed(FileTreeContext context)
