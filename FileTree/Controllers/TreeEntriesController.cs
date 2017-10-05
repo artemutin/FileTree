@@ -35,15 +35,21 @@ namespace FileTree.Controllers
         [HttpPost]
         public ActionResult Move(int movedId, int newParentId, int position)
         {
-            Thread.Sleep(2000);
-            
-            var movedTreeEntry = db.TreeEntries.Where(x => x.Id == movedId).Single();
-            var newParent = db.TreeEntries.Where(x => x.Id == newParentId).Single();
-            movedTreeEntry.RemoveFromParent();
-            newParent.AddChild(movedTreeEntry, position);
-            db.SaveChanges();
-            return new HttpStatusCodeResult(200);
-            
+            try
+            {
+                var movedTreeEntry = db.TreeEntries.Where(x => x.Id == movedId).Single();
+                var newParent = db.TreeEntries.Where(x => x.Id == newParentId).Single();
+                movedTreeEntry.RemoveFromParent();
+                newParent.AddChild(movedTreeEntry, position);
+                db.SaveChanges();
+                Thread.Sleep(2000);
+
+                return new HttpStatusCodeResult(200);
+            }catch(Exception e)
+            {
+                return new HttpStatusCodeResult(400, e.Message);
+                throw e;
+            }
         }
 
         protected override void Dispose(bool disposing)

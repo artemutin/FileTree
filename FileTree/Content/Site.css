@@ -30,9 +30,7 @@ textarea {
 }
 
 .ident{
-    margin-left: 20px;
-    margin-top: 5px;
-    margin-bottom: 5px;
+    margin: 5px 0 5px 20px;
     border: 1px solid black;
     max-width: 200px;
 }
