@@ -7,6 +7,7 @@ var FileTree = (function () {
     var domReady = false;
     var deflatedFileTree = null;
     var lastLeavedElement = null;
+    var handler = null;
     
 
     var TreeEntry = function (Id, name, parent = null, children = null) {
@@ -16,56 +17,56 @@ var FileTree = (function () {
         this.isHovered = false;
         this.Id = Id;
         idToRefMappingStorage[Id] = this;
-        
-    }
 
-    TreeEntry.prototype.isFolder = function(){
+    };
+
+    TreeEntry.prototype.isFolder = function () {
         return this.children !== null;
-    }
+    };
 
-    TreeEntry.prototype.addChild = function (treeEntry, isFolder=false, position = -1) {
+    TreeEntry.prototype.addChild = function (treeEntry, isFolder = false, position = -1) {
         if (!this.isFolder() || position > this.children.length)
             return this;
         if (typeof treeEntry === 'string') {
             treeEntry = new TreeEntry(treeEntry, this, []);
-        };
-        //this.children = this.children === null ? [] : this.children; 
-        if (position == -1) {
+        }
+
+        if (position === -1) {
             this.children.push(treeEntry);
         } else {
             this.children.splice(position, 0, treeEntry);
         }
         treeEntry.parent = this;
         return this;
-    }
+    };
 
     TreeEntry.prototype.removeFromParent = function () {
         if (this.parent !== null) {
             var that = this;
             this.parent.children = this.parent.children.filter(
-                function (ref) { return ref !== that }
+                function (ref) { return ref !== that; }
             );
         }
-    }
+    };
 
-    TreeEntry.prototype.getDomID = function(){
+    TreeEntry.prototype.getDomID = function () {
         return uniquePrefix + this.Id;
-    }
+    };
 
     TreeEntry.prototype.switchOfIsHovered = function () {
         this.isHovered = false;
         $("#" + this.getDomID()).removeClass("hovered");
         if (this.parent !== null) {
             this.parent.switchOfIsHovered();
-        };
-    }
+        }
+    };
 
     function getModelRefFromDomID(domId) {
         var re = /^\D+(\d+)$/;
         var id = re.exec(domId);
         if (id.length !== 2)
             return null;
-        id = +id[1]
+        id = +id[1];
         return idToRefMappingStorage[id];
     }
 
@@ -73,14 +74,14 @@ var FileTree = (function () {
         var treeEntry = new TreeEntry(deflatedFileTree.Id, deflatedFileTree.Name, parent, deflatedFileTree.IsFolder ? [] : null);
         if (deflatedFileTree.IsFolder) {
             treeEntry.children = deflatedFileTree.Children.sort(function (a, b) {
-                return a.Position > b.Position
+                return a.Position > b.Position;
             }).map(function (val) {
                 return inflateFileTree(val, treeEntry);
             });
         }
         
         return treeEntry;
-    };
+    }
 
     function clearLastLeavedElement() {
         if (lastLeavedElement !== null) {
@@ -89,13 +90,14 @@ var FileTree = (function () {
     }
 
     function getPositionFromLeavedElement() {
+        //folder always have icon as first element
         var el = $(lastLeavedElement);
         var position = -1;
 
         if (el.hasClass("leaved_through_top")) {
-            position = lastLeavedElement.index() - 1;
+            position = el.parent().children("div.ident").index(el);
         } else if (el.hasClass("leaved_through_bottom")) {
-            position = lastLeavedElement.index();
+            position = el.parent().children("div.ident").index(el)+1;
         }
         return position;
     }
@@ -116,7 +118,7 @@ var FileTree = (function () {
             node = $('<div/>', {
                 text: treeEntry.name,
                 class: 'ident',
-                id: treeEntry.getDomID(),
+                id: treeEntry.getDomID()
             }).prepend('<img class="tree_icon" src="Content/Images/folder.png" />')
                 .append(treeEntry.children.map(viewFileTree));
         }
@@ -156,32 +158,36 @@ var FileTree = (function () {
                     console.error(status);
                 }
             });
-    };
+    }
 
     TreeEntry.prototype.getDroppableHandlers = function () {
         var treeEntry = this;
 
         function dropHandler(event, ui) {
-            event.stopPropagation();
+            if (ui.helper.hasClass("dropped")) {
+                return;//stops glitchy event propagation
+            } else {
+                ui.helper.addClass("dropped");
+            }
             var whatsDropped = ui.draggable;
             var position = -1;
-         
+
             //update DOM part
-            if (treeEntry.isFolder() && treeEntry.isHovered) {
+            if (treeEntry.isFolder()) {
                 var whereDropped = $("#" + treeEntry.getDomID());
-                if (whereDropped !== lastLeavedElement) {
+                if (lastLeavedElement && lastLeavedElement.parent()[0] === whereDropped[0]) {
                     position = getPositionFromLeavedElement();
-                    console.log(position);
-                    $(whereDropped.children()).eq(position).after(whatsDropped);
+                    $(whereDropped.children("div.ident")).eq(position).before(whatsDropped);
+
                 } else {
                     whereDropped.append(whatsDropped);
                 }
-                
+
             } else {
                 //dropped on some file item inside directory
                 whereDropped = $("#" + treeEntry.getDomID());
                 whatsDropped.insertAfter(whereDropped);
-                position = whereDropped.index();
+                position = whereDropped.index("div.ident");
                 whereDropped = whereDropped.parent();//now it points to folder, which contains item being dropped on
             }
 
@@ -193,44 +199,52 @@ var FileTree = (function () {
             treeEntry.switchOfIsHovered();
             whatsDropped = getModelRefFromDomID(whatsDropped.attr("id"));
             whatsDropped.removeFromParent();
-            
+
             if (treeEntry.isFolder()) {
                 treeEntry.addChild(whatsDropped);
             } else {
                 treeEntry.parent.addChild(whatsDropped, false, position);
             }
             sendDropResultToServer(whatsDropped, position, whereDropped);
-            console.log(treeEntry);
-        };
+            console.log(position);
+        }
 
         function overHandler(event, ui) {
             treeEntry.isHovered = true;
             $(event.target).addClass("hovered");
         }
 
+        function activateHandler(event, ui) {
+            handler = ui.handler;
+        }
+
         function outHandler(event, ui) {
+            event.stopPropagation()
             treeEntry.isHovered = false;
             var leavedElement = $(event.target);
             leavedElement.removeClass("hovered");
-            
+
             clearLastLeavedElement();
             var coords = leavedElement.offset();
             if (event.pageY < coords.top) {
+                console.log(event.pageY, coords.top);
                 leavedElement.addClass("leaved_through_top");
             } else {
+                console.log(event.pageY, coords.top);
                 leavedElement.addClass("leaved_through_bottom");
-            };
+            }
 
             lastLeavedElement = leavedElement;
-            
+
         }
 
         return {
             dropHandler: dropHandler,
             overHandler: overHandler,
-            outHandler: outHandler
-        }
-    }
+            outHandler: outHandler,
+            activateHandler: activateHandler
+        };
+    };
 
     var startingCallback = function (arg) {
         if (typeof arg === "function") {
@@ -248,7 +262,7 @@ var FileTree = (function () {
             deflatedFileTree = null;
             node.append(viewFileTree(fileTree));
         }
-    }
+    };
 
     $.ajax("TreeEntries", {
         dataType: "json",
@@ -258,9 +272,9 @@ var FileTree = (function () {
         }
     });
 
-    return {   
+    return {
         onDocumentReady: startingCallback
-    }
+    };
 })();
 
-$(document).ready(FileTree.onDocumentReady)
+$(document).ready(FileTree.onDocumentReady);

@@ -37,111 +37,13 @@ namespace FileTree.Controllers
         {
             Thread.Sleep(2000);
             
-                var movedTreeEntry = db.TreeEntries.Where(x => x.Id == movedId).Single();
-                var newParent = db.TreeEntries.Where(x => x.Id == newParentId).Single();
-                movedTreeEntry.RemoveFromParent();
-                newParent.AddChild(movedTreeEntry, position);
-                db.SaveChanges();
-                return new HttpStatusCodeResult(200);
-            
-            
-            
-            
-        }
-
-        // GET: TreeEntries/Details/5
-        public ActionResult Details(int? id)
-        {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-            TreeEntry treeEntry = db.TreeEntries.Find(id);
-            if (treeEntry == null)
-            {
-                return HttpNotFound();
-            }
-            return View(treeEntry);
-        }
-
-        // GET: TreeEntries/Create
-        public ActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: TreeEntries/Create
-        // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
-        // more details see https://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create([Bind(Include = "id,name,isFolder")] TreeEntry treeEntry)
-        {
-            if (ModelState.IsValid)
-            {
-                db.TreeEntries.Add(treeEntry);
-                db.SaveChanges();
-                return RedirectToAction("Index");
-            }
-
-            return View(treeEntry);
-        }
-
-        // GET: TreeEntries/Edit/5
-        public ActionResult Edit(int? id)
-        {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-            TreeEntry treeEntry = db.TreeEntries.Find(id);
-            if (treeEntry == null)
-            {
-                return HttpNotFound();
-            }
-            return View(treeEntry);
-        }
-
-        // POST: TreeEntries/Edit/5
-        // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
-        // more details see https://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit([Bind(Include = "id,name,isFolder")] TreeEntry treeEntry)
-        {
-            if (ModelState.IsValid)
-            {
-                db.Entry(treeEntry).State = EntityState.Modified;
-                db.SaveChanges();
-                return RedirectToAction("Index");
-            }
-            return View(treeEntry);
-        }
-
-        // GET: TreeEntries/Delete/5
-        public ActionResult Delete(int? id)
-        {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-            TreeEntry treeEntry = db.TreeEntries.Find(id);
-            if (treeEntry == null)
-            {
-                return HttpNotFound();
-            }
-            return View(treeEntry);
-        }
-
-        // POST: TreeEntries/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public ActionResult DeleteConfirmed(int id)
-        {
-            TreeEntry treeEntry = db.TreeEntries.Find(id);
-            db.TreeEntries.Remove(treeEntry);
+            var movedTreeEntry = db.TreeEntries.Where(x => x.Id == movedId).Single();
+            var newParent = db.TreeEntries.Where(x => x.Id == newParentId).Single();
+            movedTreeEntry.RemoveFromParent();
+            newParent.AddChild(movedTreeEntry, position);
             db.SaveChanges();
-            return RedirectToAction("Index");
+            return new HttpStatusCodeResult(200);
+            
         }
 
         protected override void Dispose(bool disposing)
