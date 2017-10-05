@@ -35,3 +35,15 @@ textarea {
     border: 1px solid black;
     max-width: 200px;
 }
+
+.hovered {
+    background-color: powderblue;
+}
+
+.ident.leaved_through_top{
+    border-top: 1px dashed red;
+}
+
+.ident.leaved_through_bottom {
+    border-bottom: 1px dashed red;
+}
