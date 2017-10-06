@@ -28,10 +28,12 @@ namespace FileTree.Models
             else
             {
                 child.Position = position;
+                
                 foreach (var treeEntry in this.Children.Where(x => x.Position >= position))
                 {
                     treeEntry.Position += 1;
                 }
+                 
                 this.Children.Insert(position, child);
             }
         }

@@ -11,7 +11,7 @@ var FileTree = (function () {
     var fileIcon = $('<img class="tree_icon" src="Content/Images/file.png" />');
     var folderIcon = $('<img class="tree_icon" src="Content/Images/folder.png" />');
 
-    
+
 
     var TreeEntry = function (Id, name, parent = null, children = null) {
         this.name = name;
@@ -58,8 +58,12 @@ var FileTree = (function () {
     TreeEntry.prototype.switchOfIsHovered = function () {
         $("#" + this.getDomID()).removeClass("hovered");
         if (this.parent !== null) {
-            //this.parent.switchOfIsHovered();
+            this.parent.switchOfIsHovered();
         }
+    };
+
+    TreeEntry.prototype.findChildPosition = function (child) {
+        return this.children.findIndex(function (r) { return r === child; });
     };
 
     function getModelRefFromDomID(domId) {
@@ -80,7 +84,7 @@ var FileTree = (function () {
                 return inflateFileTree(val, treeEntry);
             });
         }
-        
+
         return treeEntry;
     }
 
@@ -95,14 +99,24 @@ var FileTree = (function () {
         var position = -1;
 
         if (el.hasClass("leaved_through_top")) {
-            position = el.parent().children("div.ident").index(el);
+            position = el.parent().children("div.indent").index(el);
         } else if (el.hasClass("leaved_through_bottom")) {
-            position = el.parent().children("div.ident").index(el)+1;
+            position = el.parent().children("div.indent").index(el) + 1;
         }
 
         var treeEntry = getModelRefFromDomID(el.attr("id"));
-        
+
         return position;
+    }
+
+    function addIfMovingInsideSameFolder(droppedEntry, whereDroppedEntry, newPosition) {
+        if (droppedEntry.parent === whereDroppedEntry) {
+            var oldPosition = whereDroppedEntry.children.findIndex(function (r) { return r === droppedEntry; });
+            if (oldPosition > -1 && oldPosition < newPosition) {
+                return -1;
+            }
+        }
+        return 0;
     }
 
     //View
@@ -110,14 +124,14 @@ var FileTree = (function () {
     var viewFileTree = function (treeEntry) {
         var node = $('<div/>', {
             text: treeEntry.name,
-            class: 'ident',
+            class: 'indent',
             id: treeEntry.getDomID()
-        }); 
+        });
 
         if (!treeEntry.isFolder()) {
             node.prepend(fileIcon.clone());
         } else {
-            node.prepend(folderIcon.clone()).append(treeEntry.children.map(viewFileTree));
+            node.addClass("folder").prepend(folderIcon.clone()).append(treeEntry.children.map(viewFileTree));
         }
 
         var droppableHandlers = treeEntry.getDroppableHandlers();
@@ -125,9 +139,9 @@ var FileTree = (function () {
             containment: "#root",
             helper: function () {
                 if (treeEntry.isFolder()) {
-                    return $('<div/>', {class: 'ident'}).text(treeEntry.name).prepend(fileIcon.clone());
+                    return $('<div/>', { class: 'border' }).text(treeEntry.name).prepend(fileIcon.clone());
                 } else {
-                    return $('<div/>', { class: 'ident' }).text(treeEntry.name).prepend(folderIcon.clone());
+                    return $('<div/>', { class: 'border' }).text(treeEntry.name).prepend(folderIcon.clone());
                 }
             },
             start: droppableHandlers.startHandler
@@ -144,7 +158,7 @@ var FileTree = (function () {
     };
 
     //Event handling
-    function sendDropResultToServer(movedTreeEntry, position, whereDropped) {
+    function sendDropResultToServer(movedTreeEntry, position, whereDroppedEl) {
         $.ajax("TreeEntries/Move",
             {
                 data: {
@@ -154,8 +168,8 @@ var FileTree = (function () {
                 },
                 method: 'POST',
                 success: function () {
-                    whereDropped.children(".tree_icon").show();
-                    whereDropped.children("i").remove();
+                    whereDroppedEl.children(".tree_icon").show();
+                    whereDroppedEl.children("i").remove();
                 },
                 error: function (jqXHR, status) {
                     console.error(status);
@@ -172,42 +186,68 @@ var FileTree = (function () {
             } else {
                 ui.helper.addClass("dropped");
             }
-            var whatsDropped = ui.draggable;
+
             var position = -1;
+            var droppedEl = ui.draggable;
+            var whereDroppedEntry = treeEntry;
+            var droppedEntry = getModelRefFromDomID(droppedEl.attr("id"));
+            var lastLeavedEntry = lastLeavedElement && getModelRefFromDomID(lastLeavedElement.attr("id"));
+            if (whereDroppedEntry === droppedEntry) {
+                return;//it shouldn't happen
+            }
+
+            var whereDroppedEl = $("#" + whereDroppedEntry.getDomID());
 
             //update DOM part
-            if (treeEntry.isFolder()) {
-                var whereDropped = $("#" + treeEntry.getDomID());
-                if (lastLeavedElement && lastLeavedElement.parent().is(whereDropped)) {
+            if (whereDroppedEntry.isFolder()) {
+                var justAppend = false;
+
+                if (lastLeavedEntry && lastLeavedEntry.parent === whereDroppedEntry) {
                     position = getPositionFromLeavedElement();
-                    
-                    $(whereDropped.children("div.ident")).eq(position).before(whatsDropped);
+                    var addition = addIfMovingInsideSameFolder(droppedEntry, whereDroppedEntry, position);
+                    position += addition;
+                    if (addition !== 0) {//detach and reselect to properly insert into DOM
+                        droppedEl = droppedEl.detach();
+                        whereDroppedEl = $("#" + whereDroppedEntry.getDomID());
+                    }
+
+                    var prepEl = $(whereDroppedEl.children("div.indent")).eq(position);
+                    if (prepEl.length > 0) {
+                        prepEl.before(droppedEl);
+                    } else {
+                        justAppend = true;
+                    }
                 } else {
-                    whereDropped.append(whatsDropped);
+                    justAppend = true;
                 }
+
+                if (justAppend) {
+                    whereDroppedEl.append(droppedEl);//by default append to an end of folder
+                }
+
             } else {
-                //dropped on some file item inside directory
-                whereDropped = $("#" + treeEntry.getDomID());
-                whatsDropped.insertAfter(whereDropped);
-                position = whereDropped.index();
-                whereDropped = whereDropped.parent();//now it points to folder, which contains item being dropped on
+                //dropped on file item inside directory, will place dropped item after it
+                position = whereDroppedEntry.parent.findChildPosition(whereDroppedEntry) + 1;
+                position += addIfMovingInsideSameFolder(droppedEntry, whereDroppedEntry.parent, position);
+                droppedEl.insertAfter(whereDroppedEl);
+                whereDroppedEl = whereDroppedEl.parent();
             }
 
-            whereDropped.children(".tree_icon").hide();
-            whereDropped.prepend('<i class="fa fa-refresh fa-spin fa-1x fa-fw" aria-hidden="true"></i>');
+            whereDroppedEl.children(".tree_icon").hide();
+            whereDroppedEl.prepend('<i class="fa fa-refresh fa-spin fa-1x fa-fw" aria-hidden="true"></i>');
             clearLastLeavedElement();
+            whereDroppedEntry.switchOfIsHovered();
 
             //update our model
-            treeEntry.switchOfIsHovered();
-            whatsDropped = getModelRefFromDomID(whatsDropped.attr("id"));
-            whatsDropped.removeFromParent();
+            
+            droppedEntry.removeFromParent();
 
-            if (treeEntry.isFolder()) {
-                treeEntry.addChild(whatsDropped);
+            if (whereDroppedEntry.isFolder()) {
+                whereDroppedEntry.addChild(droppedEntry);
             } else {
-                treeEntry.parent.addChild(whatsDropped, false, position);
+                whereDroppedEntry.parent.addChild(droppedEntry, false, position);
             }
-            sendDropResultToServer(whatsDropped, position, whereDropped);
+            sendDropResultToServer(droppedEntry, position, whereDroppedEl);
             console.log(position);
         }
 
@@ -215,13 +255,12 @@ var FileTree = (function () {
             if (lastLeavedElement && $(event.target) === lastLeavedElement.parent()) {
                 event.stopPropagation();
             }
-            
+
             $(event.target).addClass("hovered");
         }
 
         function startHandler(event, ui) {
             event.stopImmediatePropagation();
-            //$(event.target).find("*").draggable("disable");
             helper = ui.helper;
         }
 

@@ -42,7 +42,7 @@ namespace FileTree.Controllers
                 movedTreeEntry.RemoveFromParent();
                 newParent.AddChild(movedTreeEntry, position);
                 db.SaveChanges();
-                Thread.Sleep(2000);
+                Thread.Sleep(1000);
 
                 return new HttpStatusCodeResult(200);
             }catch(Exception e)

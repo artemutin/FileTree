@@ -29,20 +29,29 @@ textarea {
     width: 400px;
 }
 
-.ident{
+.border {
+    border: 1px solid black;
+    max-width: 200px;
+}
+
+.indent{
     margin: 5px 0 5px 20px;
     border: 1px solid black;
     max-width: 200px;
 }
 
+    .indent.folder {
+        padding-bottom: 10px;
+    }
+
 .hovered {
     background-color: powderblue;
 }
 
-.ident.leaved_through_top{
+.indent.leaved_through_top{
     border-top: 1px dashed red;
 }
 
-.ident.leaved_through_bottom {
+.indent.leaved_through_bottom {
     border-bottom: 1px dashed red;
 }
