@@ -8,6 +8,9 @@ var FileTree = (function () {
     var deflatedFileTree = null;
     var lastLeavedElement = null;
     var helper = null;
+    var fileIcon = $('<img class="tree_icon" src="Content/Images/file.png" />');
+    var folderIcon = $('<img class="tree_icon" src="Content/Images/folder.png" />');
+
     
 
     var TreeEntry = function (Id, name, parent = null, children = null) {
@@ -55,7 +58,7 @@ var FileTree = (function () {
     TreeEntry.prototype.switchOfIsHovered = function () {
         $("#" + this.getDomID()).removeClass("hovered");
         if (this.parent !== null) {
-            this.parent.switchOfIsHovered();
+            //this.parent.switchOfIsHovered();
         }
     };
 
@@ -96,6 +99,9 @@ var FileTree = (function () {
         } else if (el.hasClass("leaved_through_bottom")) {
             position = el.parent().children("div.ident").index(el)+1;
         }
+
+        var treeEntry = getModelRefFromDomID(el.attr("id"));
+        
         return position;
     }
 
@@ -106,18 +112,24 @@ var FileTree = (function () {
             text: treeEntry.name,
             class: 'ident',
             id: treeEntry.getDomID()
-        });
+        }); 
 
         if (!treeEntry.isFolder()) {
-            node.prepend('<img class="tree_icon" src="Content/Images/file.png" />');
+            node.prepend(fileIcon.clone());
         } else {
-            node.prepend('<img class="tree_icon" src="Content/Images/folder.png" />').append(treeEntry.children.map(viewFileTree));
+            node.prepend(folderIcon.clone()).append(treeEntry.children.map(viewFileTree));
         }
 
         var droppableHandlers = treeEntry.getDroppableHandlers();
         node.draggable({
             containment: "#root",
-            helper: "clone",
+            helper: function () {
+                if (treeEntry.isFolder()) {
+                    return $('<div/>', {class: 'ident'}).text(treeEntry.name).prepend(fileIcon.clone());
+                } else {
+                    return $('<div/>', { class: 'ident' }).text(treeEntry.name).prepend(folderIcon.clone());
+                }
+            },
             start: droppableHandlers.startHandler
         });
 
@@ -166,8 +178,9 @@ var FileTree = (function () {
             //update DOM part
             if (treeEntry.isFolder()) {
                 var whereDropped = $("#" + treeEntry.getDomID());
-                if (lastLeavedElement && lastLeavedElement.parent()[0] === whereDropped[0]) {
+                if (lastLeavedElement && lastLeavedElement.parent().is(whereDropped)) {
                     position = getPositionFromLeavedElement();
+                    
                     $(whereDropped.children("div.ident")).eq(position).before(whatsDropped);
                 } else {
                     whereDropped.append(whatsDropped);
@@ -207,7 +220,8 @@ var FileTree = (function () {
         }
 
         function startHandler(event, ui) {
-            event.stopPropagation();
+            event.stopImmediatePropagation();
+            //$(event.target).find("*").draggable("disable");
             helper = ui.helper;
         }
 
